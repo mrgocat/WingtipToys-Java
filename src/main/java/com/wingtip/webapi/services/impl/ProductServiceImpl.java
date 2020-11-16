@@ -2,6 +2,7 @@ package com.wingtip.webapi.services.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
@@ -24,10 +25,10 @@ public class ProductServiceImpl implements ProductService{
 	}
 	@Override
 	public ProductDto getProduct(int id) {
-		ProductEntity entity = productRepository.getOne(id);
-		if(entity == null) throw new ResourceNotFoundException("ID-" + id);
+		Optional<ProductEntity> optional = productRepository.findById(id);
+		if(!optional.isPresent()) throw new ResourceNotFoundException("ID-" + id);
 		ProductDto dto = new ProductDto();
-		BeanUtils.copyProperties(entity, dto);
+		BeanUtils.copyProperties(optional.get(), dto);
 		return dto;
 	}
 	@Override

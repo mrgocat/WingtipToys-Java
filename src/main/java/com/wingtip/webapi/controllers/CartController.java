@@ -9,6 +9,9 @@ import javax.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.PropertyMap;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,9 +22,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.wingtip.webapi.exception.AuthException;
 import com.wingtip.webapi.exception.BadRequestException;
-import com.wingtip.webapi.model.CartCreateModel;
-import com.wingtip.webapi.model.CartResponseModel;
+import com.wingtip.webapi.models.CartCreateModel;
+import com.wingtip.webapi.models.CartResponseModel;
 import com.wingtip.webapi.services.CartService;
 import com.wingtip.webapi.services.dto.CartItemDto;
 
@@ -57,7 +61,22 @@ public class CartController {
 			return vo;
 		}).collect(Collectors.toList());
 	}
-
+	@GetMapping()
+	public List<CartResponseModel> getCartItems(){
+		String cartId = getUserId();
+		return getCartItems(cartId);
+	}
+	private String getUserId() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if(auth == null) {
+			throw new AuthException("No auth info. null");
+		}
+		UsernamePasswordAuthenticationToken userInfo = (UsernamePasswordAuthenticationToken)auth;
+		if(userInfo.getPrincipal() == null) {
+			throw new AuthException("No auth info. no principal");
+		}
+		return (String)userInfo.getPrincipal();
+	}	
 	@PostMapping
 	public ResponseEntity<CartReturnModel> createCart(@Valid @RequestBody CartCreateModel cartRequest) {
 		CartItemDto dto = cartService.createCart(cartRequest);
@@ -70,7 +89,6 @@ public class CartController {
 		return ResponseEntity.created(location)
 	              .body(new CartReturnModel(dto.getCartId()));
 	}
-	
 	@PatchMapping
 	public void patchCart(@RequestBody CartItemDto dto) {
 		String cartId = dto.getCartId();

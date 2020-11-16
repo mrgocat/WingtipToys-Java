@@ -1,4 +1,4 @@
-package com.wingtip.webapi.model;
+package com.wingtip.webapi.models;
 
 import java.util.Date;
 

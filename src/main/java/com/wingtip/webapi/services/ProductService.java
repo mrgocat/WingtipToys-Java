@@ -7,7 +7,5 @@ import com.wingtip.webapi.services.dto.ProductDto;
 public interface ProductService {
 	ProductDto getProduct(int id);
 	List<ProductDto> getProducts();
-	List<ProductDto> getProducts(String name, String value);
-	
-	
+	List<ProductDto> getProducts(String name, String value);	
 }

@@ -1,16 +1,17 @@
-package com.wingtip.webapi.model;
+package com.wingtip.webapi.models;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 public class CartCreateModel {
 	private String id;
 	private String cartId;
 	
-	@NotBlank(message = "Quantity is required")
+	@NotNull(message = "Quantity is required")
 	@Min(value = 1, message = "Quantity min value is 1.")
 	private int quantity;
-	@NotBlank(message = "ProductId is required")
+	@NotNull(message = "ProductId is required")
 	@Min(value = 1, message = "Invalid productId.")
 	private int productId;
 	public String getId() {

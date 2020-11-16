@@ -1,6 +1,7 @@
 package com.wingtip.webapi.services.impl;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -10,7 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.wingtip.webapi.exception.BadRequestException;
-import com.wingtip.webapi.model.CartCreateModel;
+import com.wingtip.webapi.models.CartCreateModel;
 import com.wingtip.webapi.repository.CartItemRepository;
 import com.wingtip.webapi.repository.ProductRepository;
 import com.wingtip.webapi.repository.entities.CartItemEntity;
@@ -40,30 +41,46 @@ public class CartServiceImpl implements CartService{
 	}
 	@Override
 	public CartItemDto createCart(CartCreateModel model) {
+		if(model.getCartId() == null || model.getCartId().isEmpty()) {
+			model.setCartId(UUID.randomUUID().toString());
+		}
 		if(model.getQuantity() <= 0) model.setQuantity(1);
 		if(model.getProductId() <= 0) throw new BadRequestException("Product Id Required.");
-		ProductEntity prod = productRepository.getOne(model.getProductId());
-		if(prod == null) {
+		Optional<ProductEntity> optional = productRepository.findById(model.getProductId());
+		if(!optional.isPresent()) {
 			throw new BadRequestException("Cannot find the product with id-" + model.getProductId());
 		}
+		ProductEntity product = optional.get();
 		ModelMapper mapper = new ModelMapper();
 		CartItemEntity item = null;
 		if(model.getId() == null || model.getId().isEmpty()) {
-			item = cartItemRepository.getOne(model.getId());
-			if(item != null) {
+			model.setId(UUID.randomUUID().toString());
+		}else {
+			Optional<CartItemEntity> optCartItem = cartItemRepository.findById(model.getId());
+			if(optCartItem.isPresent()) {
+				item = optCartItem.get();
 				if(item.getProduct().getId() != model.getProductId()) {
-					throw new BadRequestException("Wrong cart item id-"+model.getId());
+					throw new BadRequestException("Wrong cart item id-"+model.getId()+", Product doen't match.");
 				}
 				item.setQuantity(model.getQuantity());
 				cartItemRepository.save(item);
 				
 				return mapper.map(item, CartItemDto.class);
 			}
-		}else {
 			model.setId(UUID.randomUUID().toString());
 		}
+		
+		List<CartItemEntity> list = cartItemRepository.findByProductId(model.getProductId());
+		if(list.size() > 1) {
+			cartItemRepository.deleteAll(list);
+		}else if(list.size() > 0) {
+			item = list.get(0);
+			item.setQuantity(model.getQuantity());
+			cartItemRepository.save(item);
+			return mapper.map(item, CartItemDto.class);
+		}
 		item = mapper.map(model, CartItemEntity.class);
-		item.setProduct(prod);
+		item.setProduct(product);
 		cartItemRepository.save(item);
 		
 		return mapper.map(item, CartItemDto.class);
@@ -71,7 +88,8 @@ public class CartServiceImpl implements CartService{
 	@Override
 	public void updateQuantity(String cartId, String itemId, int quantity) {
 		CartItemEntity item = null;
-		item = cartItemRepository.getOne(itemId);
+		Optional<CartItemEntity> optional = cartItemRepository.findById(itemId);
+		if(optional.isPresent()) item = optional.get();
 		if(item == null) throw new BadRequestException("Wrong cart item id-"+itemId);
 		
 		if(!item.getCartId().equals(cartId)) throw new BadRequestException("Wrong cart id-"+cartId);
@@ -84,7 +102,8 @@ public class CartServiceImpl implements CartService{
 	@Override
 	public void deleteCartItem(String cartId, String itemId) {
 		CartItemEntity item = null;
-		item = cartItemRepository.getOne(itemId);
+		Optional<CartItemEntity> optional = cartItemRepository.findById(itemId);
+		if(optional.isPresent()) item = optional.get();
 		if(item == null) throw new BadRequestException("Wrong cart item id-"+itemId);
 		if(!item.getCartId().equals(cartId)) throw new BadRequestException("Wrong cart id-"+cartId);
 		cartItemRepository.delete(item);
@@ -92,7 +111,8 @@ public class CartServiceImpl implements CartService{
 
 	@Override
 	public void deleteCart(String cartId) {
-		cartItemRepository.deleteByCartId(cartId);
+		List<CartItemEntity> list = cartItemRepository.findAllByCartId(cartId);
+		if(list.size() > 0) cartItemRepository.deleteAll(list);
 	}
 	
 }
